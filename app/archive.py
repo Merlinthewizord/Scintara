@@ -88,11 +88,13 @@ def append_dialogue(
     return item
 
 
-def read_archive(limit: int | None = None) -> List[Dict[str, Any]]:
+def read_archive(limit: int | None = None, search: str | None = None) -> List[Dict[str, Any]]:
     client = _supabase_client()
     if client is not None:
         table = _supabase_table()
         query = client.table(table).select("*").order("created_at", desc=False)
+        if search:
+            query = query.ilike("preview", f"%{search}%")
         if limit is not None and limit >= 0:
             query = query.limit(limit)
         response = query.execute()
@@ -110,6 +112,9 @@ def read_archive(limit: int | None = None) -> List[Dict[str, Any]]:
                 continue
     if limit is not None and limit >= 0:
         items = items[-limit:]
+    if search:
+        needle = search.lower()
+        items = [item for item in items if needle in str(item.get("preview", "")).lower()]
     return items
 
 

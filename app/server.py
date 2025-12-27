@@ -55,8 +55,8 @@ def health():
 
 
 @app.get("/v1/archive")
-def archive(limit: int | None = None):
-    return {"items": read_archive(limit=limit)}
+def archive(limit: int | None = None, search: str | None = None):
+    return {"items": read_archive(limit=limit, search=search)}
 
 
 @app.get("/v1/archive/{entry_id}")

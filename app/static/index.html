@@ -23,6 +23,12 @@
           <div class="terminal-line muted">sessions are appended every hour by a focused dialogue.</div>
         </div>
 
+        <div class="archive-search">
+          <label class="search-label" for="searchInput">search</label>
+          <input id="searchInput" class="search-input" type="search" placeholder="filter by preview..." />
+          <button class="button secondary" type="button" id="searchBtn">run</button>
+          <button class="button" type="button" id="clearSearchBtn">clear</button>
+        </div>
         <div class="status" id="status">loading archive...</div>
         <section id="archiveList" class="archive-log" data-mode="list"></section>
       </section>

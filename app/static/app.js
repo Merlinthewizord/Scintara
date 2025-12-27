@@ -1,5 +1,8 @@
 const archiveList = document.getElementById("archiveList");
 const archiveStatus = document.getElementById("status");
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
+const clearSearchBtn = document.getElementById("clearSearchBtn");
 const conversationLog = document.getElementById("conversationLog");
 const entryMeta = document.getElementById("entryMeta");
 
@@ -54,7 +57,9 @@ async function loadArchive() {
   }
   setStatus("Retrieving archive...");
   try {
-    const response = await fetch("/v1/archive");
+    const query = searchInput && searchInput.value.trim();
+    const url = query ? `/v1/archive?search=${encodeURIComponent(query)}` : "/v1/archive";
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error("Archive fetch failed");
     }
@@ -62,7 +67,9 @@ async function loadArchive() {
     const items = Array.isArray(data) ? data : data.items || [];
     archiveList.innerHTML = "";
     if (!items.length) {
-      archiveList.innerHTML = '<div class="log-entry">no archived conversations yet.</div>';
+      archiveList.innerHTML = query
+        ? '<div class="log-entry">no matches found.</div>'
+        : '<div class="log-entry">no archived conversations yet.</div>';
     } else {
       items.reverse().forEach((item) => {
         archiveList.appendChild(renderArchiveItem(item));
@@ -111,6 +118,28 @@ async function loadConversation() {
   } catch (err) {
     setStatus("session unreachable.");
   }
+}
+
+if (searchBtn) {
+  searchBtn.addEventListener("click", () => loadArchive());
+}
+
+if (clearSearchBtn) {
+  clearSearchBtn.addEventListener("click", () => {
+    if (searchInput) {
+      searchInput.value = "";
+    }
+    loadArchive();
+  });
+}
+
+if (searchInput) {
+  searchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      loadArchive();
+    }
+  });
 }
 
 loadArchive();
