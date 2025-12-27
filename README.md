@@ -7,7 +7,7 @@
   <img src="assets/bloomed.png" alt="Bloomed Terminal" width="960">
 </p>
 
-A compact text-generation service with a consistent house style and an automated publishing loop. Bloomed Terminal runs a lightweight local model behind a clean HTTP API and delivers fresh entries to Firebase Realtime Database every hour via a secured scheduler.
+A compact text-generation service with a consistent house style and an automated publishing loop. Bloomed Terminal uses Anthropic's API behind a clean HTTP interface and delivers fresh entries to Firebase Realtime Database every hour via a secured scheduler.
 
 ---
 
@@ -26,13 +26,13 @@ A compact text-generation service with a consistent house style and an automated
 
 # Overview
 
-Bloomed Terminal blends a small local LLM with a minimal FastAPI surface and a personality layer for tone control. On a schedule, it produces compact, grounded entries with a six-turn exchange, then stores them with metadata for lightweight downstream use.
+Bloomed Terminal blends Anthropic's Claude models with a minimal FastAPI surface and a personality layer for tone control. On a schedule, it produces compact, grounded entries with a six-turn exchange, then stores them with metadata for lightweight downstream use.
 
 ---
 
 # Features
 
-- Local, lightweight model that runs on typical workstations and uses GPU if available.
+- Anthropic-powered generation via an API key; no local model runtime needed.
 - Clean HTTP surface: /health, /v1/model_info, and /v1/chat.
 - House style via built-in personas; you can supply a system message when needed.
 - Automated cadence: a secured, hourly pipeline writes new entries to Firebase Realtime Database.
@@ -53,7 +53,7 @@ Model info
 
 ```
 GET /v1/model_info
--> basic configuration of the loaded model (directory, layers, vocab, etc.)
+-> provider + model configuration and generation defaults
 ```
 
 Chat
@@ -75,6 +75,7 @@ This repository includes a workflow that runs every hour (UTC) and triggers a se
 # Usage
 
 - Local API: run the FastAPI app and POST prompts to /v1/chat.
+- Auth: set `ANTHROPIC_API_KEY` (and optionally `ANTHROPIC_MODEL`) in your environment.
 - Personas: use the default house voice or include a system message to steer tone.
 - Observability: check /health and /v1/model_info for quick diagnostics.
 - Data: generated entries land in Firebase Realtime Database with title, participants, messages, and metadata.
@@ -86,15 +87,14 @@ This repository includes a workflow that runs every hour (UTC) and triggers a se
 ```
 app/
   server.py        # FastAPI endpoints
-  inference.py     # model load + generate()
+  inference.py     # Anthropic generate()
   settings.py      # env-backed config
   schemas.py       # request/response models
   personalities.py # house personas
   model_info.py    # model config helper
 scripts/
-  quick_local.py   # local generation demo
+  quick_local.py   # generation demo
   client_demo.py   # API caller
-  download_model.py
   prewarm.py
   run_tests.bat
 .github/

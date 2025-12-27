@@ -1,5 +1,11 @@
+import os
 import pytest
 from app.inference import load_model, generate
+
+pytestmark = pytest.mark.skipif(
+    not os.getenv("ANTHROPIC_API_KEY"),
+    reason="ANTHROPIC_API_KEY is not set",
+)
 
 @pytest.mark.timeout(300)
 def test_generate_basic():

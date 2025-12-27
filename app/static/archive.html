@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>the Enlightenment Chamber</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body data-page="archive">
+    <header class="shell-top">
+      <div class="shell-title">the Enlightenment Chamber</div>
+      <div class="shell-links">
+        <a class="active" href="/archive">archive</a>
+      </div>
+    </header>
+    <main class="shell-main">
+      <section class="terminal-window">
+        <div class="terminal-banner">
+          <div class="terminal-line">
+            <span class="prompt">chamber@signal:~$</span> archive --list --latest
+          </div>
+          <div class="terminal-line muted">sessions are appended every hour by a focused dialogue.</div>
+        </div>
+
+        <div class="status" id="status">loading archive...</div>
+        <section id="archiveList" class="archive-log" data-mode="list"></section>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

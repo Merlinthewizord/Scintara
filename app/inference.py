@@ -1,8 +1,7 @@
 import logging
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig
+from anthropic import Anthropic
 
 from .settings import settings
 from .personalities import default_persona_system
@@ -10,45 +9,21 @@ from .personalities import default_persona_system
 logger = logging.getLogger("bloomed-terminal.inference")
 logging.basicConfig(level=logging.INFO)
 
-_MODEL = None
-_TOKENIZER = None
-
-def _device_map():
-    return "auto" if torch.cuda.is_available() else {"": "cpu"}
+_CLIENT = None
 
 def load_model(model_dir: Optional[str] = None) -> None:
     """
-    Lazy-load tokenizer + model into module globals.
+    Lazy-load Anthropic client into module globals.
     """
-    global _MODEL, _TOKENIZER
-    if _MODEL is not None and _TOKENIZER is not None:
+    del model_dir
+    global _CLIENT
+    if _CLIENT is not None:
         return
-    mdl = model_dir or settings.model_dir
-    logger.info(f"Loading model from: {mdl}")
-    _TOKENIZER = AutoTokenizer.from_pretrained(mdl, use_fast=True)
-    _MODEL = AutoModelForCausalLM.from_pretrained(
-        mdl,
-        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-        device_map=_device_map(),
-        low_cpu_mem_usage=True,
-        trust_remote_code=True,
-    )
-    logger.info("Model loaded.")
-
-def _chat_template(messages: List[Dict[str, str]]) -> str:
-    """
-    Use the model's chat template if available; otherwise a simple role-tagged format.
-    """
-    try:
-        return _TOKENIZER.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
-    except Exception:
-        parts = []
-        for m in messages:
-            parts.append(f"{m['role'].upper()}: {m['content']}")
-        parts.append("ASSISTANT:")
-        return "\n".join(parts)
+    if not settings.anthropic_api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY is not set. Add it to your environment.")
+    logger.info("Initializing Anthropic client.")
+    _CLIENT = Anthropic(api_key=settings.anthropic_api_key)
+    logger.info("Anthropic client ready.")
 
 def _ensure_persona_system(messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
     """
@@ -58,6 +33,19 @@ def _ensure_persona_system(messages: List[Dict[str, str]]) -> List[Dict[str, str
         return messages
     sys = default_persona_system()
     return [{"role": "system", "content": sys}, *messages]
+
+def _split_system(messages: List[Dict[str, str]]) -> Tuple[str, List[Dict[str, str]]]:
+    system_parts: List[str] = []
+    filtered: List[Dict[str, str]] = []
+    for msg in messages:
+        role = msg.get("role")
+        content = msg.get("content", "")
+        if role == "system":
+            if content:
+                system_parts.append(content)
+        elif role in ("user", "assistant"):
+            filtered.append({"role": role, "content": content})
+    return "\n\n".join(system_parts).strip(), filtered
 
 def generate(
     messages: List[Dict[str, str]],
@@ -69,8 +57,8 @@ def generate(
     """
     Core text generation: returns assistant content as a string.
     """
-    global _MODEL, _TOKENIZER
-    if _MODEL is None or _TOKENIZER is None:
+    global _CLIENT
+    if _CLIENT is None:
         load_model()
 
     messages = _ensure_persona_system(messages)
@@ -79,34 +67,25 @@ def generate(
     temperature = float(temperature if temperature is not None else settings.temperature)
     top_p = float(top_p if top_p is not None else settings.top_p)
 
-    prompt = _chat_template(messages)
-    inputs = _TOKENIZER([prompt], return_tensors="pt")
-    inputs = {k: v.to(_MODEL.device) for k, v in inputs.items()}
+    system_text, anthropic_messages = _split_system(messages)
+    if not anthropic_messages:
+        anthropic_messages = [{"role": "user", "content": ""}]
 
-    gen_cfg = GenerationConfig(
-        max_new_tokens=max_new_tokens,
-        temperature=temperature,
-        top_p=top_p,
-        do_sample=True,
-        pad_token_id=_TOKENIZER.eos_token_id,
-        eos_token_id=_TOKENIZER.eos_token_id,
-    )
-
-    with torch.inference_mode():
-        output = _MODEL.generate(**inputs, generation_config=gen_cfg)
-
-    text = _TOKENIZER.decode(output[0], skip_special_tokens=True)
-
-    # Trim prompt echo
-    if text.startswith(prompt):
-        text = text[len(prompt):]
-
-    # Apply stop tokens if provided
+    req = {
+        "model": settings.anthropic_model,
+        "max_tokens": max_new_tokens,
+        "messages": anthropic_messages,
+        "temperature": temperature,
+        "top_p": top_p,
+    }
+    if system_text:
+        req["system"] = system_text
     if stop:
-        for token in stop:
-            idx = text.find(token)
-            if idx != -1:
-                text = text[:idx]
-                break
+        req["stop_sequences"] = stop
 
-    return text.strip()
+    response = _CLIENT.messages.create(**req)
+    parts = []
+    for block in response.content:
+        if getattr(block, "type", None) == "text":
+            parts.append(block.text)
+    return "".join(parts).strip()

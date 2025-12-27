@@ -2,7 +2,7 @@ from app.inference import load_model, generate
 from app.personalities import all_personas_meta
 
 def main():
-    load_model()  # uses settings.model_dir
+    load_model()  # validates Anthropic API key
     print("Personas:", ", ".join(p["name"] for p in all_personas_meta()))
 
     messages = [
