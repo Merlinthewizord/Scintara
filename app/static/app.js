@@ -37,8 +37,7 @@ function renderConversationMessage(message, index) {
   const label = document.createElement("div");
   label.className = "message-role";
   const speaker = message.speaker ? ` ${message.speaker}` : "";
-  const roleLabel = index % 2 === 0 ? "ai-1" : "ai-2";
-  label.textContent = `${roleLabel}${speaker}`;
+  label.textContent = `capernyx${speaker}`;
 
   const body = document.createElement("div");
   body.className = "message-content";
