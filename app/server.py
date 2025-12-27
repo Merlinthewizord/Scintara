@@ -62,7 +62,7 @@ def archive_item(entry_id: str):
     return item
 
 
-@app.post("/api/cron")
+@app.api_route("/api/cron", methods=["GET", "POST"])
 async def archive_cron(request: Request):
     secret = settings.cron_secret
     if secret:
