@@ -11,6 +11,7 @@ def _default_archive_path() -> str:
     return r"data\conversations.jsonl"
 
 class Settings(BaseModel):
+    model_config = {"protected_namespaces": ()}
     anthropic_api_key: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
     anthropic_model: str = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
     openai_api_key: Optional[str] = os.getenv("OPENAI_API_KEY")
