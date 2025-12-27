@@ -5,6 +5,11 @@ import os
 
 load_dotenv()
 
+def _default_archive_path() -> str:
+    if os.getenv("VERCEL"):
+        return "/tmp/conversations.jsonl"
+    return r"data\conversations.jsonl"
+
 class Settings(BaseModel):
     anthropic_api_key: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
     anthropic_model: str = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
@@ -12,7 +17,7 @@ class Settings(BaseModel):
     model_1: str = os.getenv("MODEL_1", "gpt-4")
     model_2: str = os.getenv("MODEL_2", "claude-opus-4-5-20251101")
     cron_secret: Optional[str] = os.getenv("CRON_SECRET")
-    archive_path: str = os.getenv("ARCHIVE_PATH", r"data\conversations.jsonl")
+    archive_path: str = os.getenv("ARCHIVE_PATH", _default_archive_path())
     dialogue_exchanges: int = int(os.getenv("DIALOGUE_EXCHANGES", "6"))
     dialogue_interval_minutes: int = int(os.getenv("DIALOGUE_INTERVAL_MINUTES", "60"))
     auto_archive: bool = os.getenv("AUTO_ARCHIVE", "true").lower() in ("1", "true", "yes")
