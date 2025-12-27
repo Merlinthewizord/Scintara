@@ -62,7 +62,6 @@ def _mem0_context(query: str) -> str:
         results = client.search(
             query,
             user_id=settings.mem0_user_id,
-            session_id=settings.mem0_session_id,
         )
     except Exception as exc:
         logger.warning("mem0 search failed: %s", exc)
@@ -224,7 +223,6 @@ def _persist_mem0(transcript: List[Dict[str, str]]) -> None:
         client.add(
             [payload],
             user_id=settings.mem0_user_id,
-            session_id=settings.mem0_session_id,
         )
     except Exception as exc:
         logger.warning("mem0 add failed: %s", exc)
