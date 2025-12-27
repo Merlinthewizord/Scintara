@@ -3,7 +3,6 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from anthropic import Anthropic
-from openai import OpenAI
 
 from .settings import settings
 from .archive import append_dialogue
@@ -18,7 +17,6 @@ SYSTEM_PROMPT = (
     "sparingly when it adds clarity or emphasis."
 )
 
-_OPENAI_CLIENT: Optional[OpenAI] = None
 _ANTHROPIC_CLIENT: Optional[Anthropic] = None
 
 
@@ -28,43 +26,31 @@ def clamp_exchanges(value: Any) -> int:
     return max(1, min(int(value), 40))
 
 
-def _ensure_clients() -> Tuple[OpenAI, Anthropic]:
-    global _OPENAI_CLIENT, _ANTHROPIC_CLIENT
-    if _OPENAI_CLIENT is None:
-        if not settings.openai_api_key:
-            raise RuntimeError("OPENAI_API_KEY is not set.")
-        _OPENAI_CLIENT = OpenAI(api_key=settings.openai_api_key)
+def _ensure_clients() -> Anthropic:
+    global _ANTHROPIC_CLIENT
     if _ANTHROPIC_CLIENT is None:
         if not settings.anthropic_api_key:
             raise RuntimeError("ANTHROPIC_API_KEY is not set.")
         _ANTHROPIC_CLIENT = Anthropic(api_key=settings.anthropic_api_key)
-    return _OPENAI_CLIENT, _ANTHROPIC_CLIENT
+    return _ANTHROPIC_CLIENT
 
 
 def chat_with_model(
     *,
     model: str,
     messages: List[Dict[str, str]],
-    openai_client: OpenAI,
     anthropic_client: Anthropic,
 ) -> str:
     normalized = model.strip().lower()
-    if normalized.startswith("claude"):
-        response = anthropic_client.messages.create(
-            model=normalized,
-            system=SYSTEM_PROMPT,
-            max_tokens=1024,
-            messages=messages,
-        )
-        return response.content[0].text if response.content else ""
-    if normalized.startswith("gpt"):
-        response = openai_client.chat.completions.create(
-            model=normalized,
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages],
-            max_tokens=1024,
-        )
-        return response.choices[0].message.content or ""
-    raise ValueError(f"Unsupported model: {model}")
+    if not normalized.startswith("claude"):
+        normalized = settings.anthropic_model
+    response = anthropic_client.messages.create(
+        model=normalized,
+        system=SYSTEM_PROMPT,
+        max_tokens=1024,
+        messages=messages,
+    )
+    return response.content[0].text if response.content else ""
 
 
 def build_conversations() -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
@@ -88,7 +74,6 @@ def run_dialogue(
     num_exchanges: int,
     model1: str,
     model2: str,
-    openai_client: OpenAI,
     anthropic_client: Anthropic,
 ) -> List[Dict[str, str]]:
     conversation1, conversation2 = build_conversations()
@@ -98,7 +83,6 @@ def run_dialogue(
         response1 = chat_with_model(
             model=model1,
             messages=conversation1,
-            openai_client=openai_client,
             anthropic_client=anthropic_client,
         )
         transcript.append({"speaker": model1, "text": response1})
@@ -108,7 +92,6 @@ def run_dialogue(
         response2 = chat_with_model(
             model=model2,
             messages=conversation2,
-            openai_client=openai_client,
             anthropic_client=anthropic_client,
         )
         transcript.append({"speaker": model2, "text": response2})
@@ -135,7 +118,7 @@ def _transcript_to_messages(transcript: List[Dict[str, str]]) -> List[Dict[str, 
 def generate_archive_entry() -> Optional[Dict[str, Any]]:
     if not settings.auto_archive:
         return None
-    openai_client, anthropic_client = _ensure_clients()
+    anthropic_client = _ensure_clients()
     num_exchanges = clamp_exchanges(settings.dialogue_exchanges)
     model1 = settings.model_1
     model2 = settings.model_2
@@ -144,7 +127,6 @@ def generate_archive_entry() -> Optional[Dict[str, Any]]:
         num_exchanges=num_exchanges,
         model1=model1,
         model2=model2,
-        openai_client=openai_client,
         anthropic_client=anthropic_client,
     )
     messages = _transcript_to_messages(transcript)

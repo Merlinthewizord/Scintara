@@ -15,7 +15,7 @@ class Settings(BaseModel):
     anthropic_api_key: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
     anthropic_model: str = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
     openai_api_key: Optional[str] = os.getenv("OPENAI_API_KEY")
-    model_1: str = os.getenv("MODEL_1", "gpt-4")
+    model_1: str = os.getenv("MODEL_1", "claude-opus-4-5-20251101")
     model_2: str = os.getenv("MODEL_2", "claude-opus-4-5-20251101")
     cron_secret: Optional[str] = os.getenv("CRON_SECRET")
     supabase_url: Optional[str] = os.getenv("SUPABASE_URL")
