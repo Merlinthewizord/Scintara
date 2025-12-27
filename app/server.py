@@ -37,6 +37,11 @@ def archive_page():
     return _page("archive.html")
 
 
+@app.get("/about", include_in_schema=False)
+def about_page():
+    return _page("about.html")
+
+
 @app.get("/archive/{entry_id}", include_in_schema=False)
 def archive_detail(entry_id: str):
     return _page("conversation.html")
