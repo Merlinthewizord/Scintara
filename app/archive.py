@@ -6,6 +6,23 @@ from typing import Dict, Any, List
 
 from .settings import settings
 
+_SUPABASE = None
+
+
+def _supabase_client():
+    global _SUPABASE
+    if _SUPABASE is not None:
+        return _SUPABASE
+    if not settings.supabase_url or not settings.supabase_service_role_key:
+        return None
+    from supabase import create_client
+    _SUPABASE = create_client(settings.supabase_url, settings.supabase_service_role_key)
+    return _SUPABASE
+
+
+def _supabase_table():
+    return settings.supabase_table or "conversations"
+
 
 def _archive_path() -> Path:
     return Path(settings.archive_path)
@@ -38,6 +55,11 @@ def append_conversation(messages: List[Dict[str, str]], response_text: str) -> D
         "messages": convo_messages,
         "preview": _preview(convo_messages),
     }
+    client = _supabase_client()
+    if client is not None:
+        table = _supabase_table()
+        client.table(table).insert(item).execute()
+        return item
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(item, ensure_ascii=True) + "\n")
     return item
@@ -56,12 +78,25 @@ def append_dialogue(
     }
     if metadata:
         item["metadata"] = metadata
+    client = _supabase_client()
+    if client is not None:
+        table = _supabase_table()
+        client.table(table).insert(item).execute()
+        return item
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(item, ensure_ascii=True) + "\n")
     return item
 
 
 def read_archive(limit: int | None = None) -> List[Dict[str, Any]]:
+    client = _supabase_client()
+    if client is not None:
+        table = _supabase_table()
+        query = client.table(table).select("*").order("created_at", desc=False)
+        if limit is not None and limit >= 0:
+            query = query.limit(limit)
+        response = query.execute()
+        return response.data or []
     path = ensure_archive_dir()
     items: List[Dict[str, Any]] = []
     with path.open("r", encoding="utf-8") as handle:
@@ -79,6 +114,13 @@ def read_archive(limit: int | None = None) -> List[Dict[str, Any]]:
 
 
 def get_archive_item(entry_id: str) -> Dict[str, Any] | None:
+    client = _supabase_client()
+    if client is not None:
+        table = _supabase_table()
+        response = client.table(table).select("*").eq("id", entry_id).execute()
+        if response.data:
+            return response.data[0]
+        return None
     path = ensure_archive_dir()
     with path.open("r", encoding="utf-8") as handle:
         for line in handle:
