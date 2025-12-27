@@ -11,6 +11,7 @@ class Settings(BaseModel):
     openai_api_key: Optional[str] = os.getenv("OPENAI_API_KEY")
     model_1: str = os.getenv("MODEL_1", "gpt-4")
     model_2: str = os.getenv("MODEL_2", "claude-opus-4-5-20251101")
+    cron_secret: Optional[str] = os.getenv("CRON_SECRET")
     archive_path: str = os.getenv("ARCHIVE_PATH", r"data\conversations.jsonl")
     dialogue_exchanges: int = int(os.getenv("DIALOGUE_EXCHANGES", "6"))
     dialogue_interval_minutes: int = int(os.getenv("DIALOGUE_INTERVAL_MINUTES", "60"))

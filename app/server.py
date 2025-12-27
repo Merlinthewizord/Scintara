@@ -1,12 +1,12 @@
-import asyncio
 import logging
 from pathlib import Path
-from fastapi import FastAPI
+import asyncio
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .archive import get_archive_item, read_archive, ensure_archive_dir
-from .dialogue import run_archive_loop
+from .dialogue import generate_archive_entry
 from .settings import settings
 
 logger = logging.getLogger("bloomed-terminal.server")
@@ -23,10 +23,8 @@ def _page(name: str) -> FileResponse:
 
 
 @app.on_event("startup")
-async def warmup():
+def warmup():
     ensure_archive_dir()
-    if settings.auto_archive:
-        asyncio.create_task(run_archive_loop())
 
 
 @app.get("/", include_in_schema=False)
@@ -62,5 +60,18 @@ def archive_item(entry_id: str):
     if item is None:
         return {"error": "Not found", "status": 404}
     return item
+
+
+@app.post("/api/cron")
+async def archive_cron(request: Request):
+    secret = settings.cron_secret
+    if secret:
+        req_secret = request.headers.get("x-cron-secret") or request.query_params.get("secret")
+        if req_secret != secret:
+            return {"ok": False, "error": "unauthorized"}
+    entry = await asyncio.to_thread(generate_archive_entry)
+    if entry is None:
+        return {"ok": False, "error": "auto archive disabled"}
+    return {"ok": True, "entry_id": entry.get("id")}
 
 
