@@ -48,17 +48,18 @@ def chat_with_model(
     openai_client: OpenAI,
     anthropic_client: Anthropic,
 ) -> str:
-    if model.startswith("claude"):
+    normalized = model.strip().lower()
+    if normalized.startswith("claude"):
         response = anthropic_client.messages.create(
-            model=model,
+            model=normalized,
             system=SYSTEM_PROMPT,
             max_tokens=1024,
             messages=messages,
         )
         return response.content[0].text if response.content else ""
-    if model.startswith("gpt"):
+    if normalized.startswith("gpt"):
         response = openai_client.chat.completions.create(
-            model=model,
+            model=normalized,
             messages=[{"role": "system", "content": SYSTEM_PROMPT}, *messages],
             max_tokens=1024,
         )
