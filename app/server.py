@@ -67,13 +67,31 @@ def archive_item(entry_id: str):
     return item
 
 
-@app.api_route("/api/cron", methods=["GET", "POST"])
-async def archive_cron(request: Request):
+def _cron_response(request: Request):
     secret = settings.cron_secret
     if secret:
         req_secret = request.headers.get("x-cron-secret") or request.query_params.get("secret")
         if req_secret != secret:
             return {"ok": False, "error": "unauthorized"}
+    return None
+
+
+@app.api_route("/api/cron", methods=["GET", "POST"])
+async def archive_cron(request: Request):
+    unauthorized = _cron_response(request)
+    if unauthorized is not None:
+        return unauthorized
+    entry = await asyncio.to_thread(generate_archive_entry)
+    if entry is None:
+        return {"ok": False, "error": "auto archive disabled"}
+    return {"ok": True, "entry_id": entry.get("id")}
+
+
+@app.api_route("/cron", methods=["GET", "POST"])
+async def archive_cron_root(request: Request):
+    unauthorized = _cron_response(request)
+    if unauthorized is not None:
+        return unauthorized
     entry = await asyncio.to_thread(generate_archive_entry)
     if entry is None:
         return {"ok": False, "error": "auto archive disabled"}
