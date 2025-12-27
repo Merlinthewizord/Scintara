@@ -1,9 +1,9 @@
 import asyncio
 import logging
+import os
 from typing import Any, Dict, List, Optional, Tuple
 
 from anthropic import Anthropic
-from mem0 import Memory
 
 from .settings import settings
 from .archive import append_dialogue
@@ -19,7 +19,7 @@ SYSTEM_PROMPT = (
 )
 
 _ANTHROPIC_CLIENT: Optional[Anthropic] = None
-_MEM0_CLIENT: Optional[Memory] = None
+_MEM0_CLIENT = None
 
 
 def clamp_exchanges(value: Any) -> int:
@@ -37,11 +37,18 @@ def _ensure_clients() -> Anthropic:
     return _ANTHROPIC_CLIENT
 
 
-def _mem0_client() -> Optional[Memory]:
+def _mem0_client():
     global _MEM0_CLIENT
     if _MEM0_CLIENT is not None:
         return _MEM0_CLIENT
     if not settings.mem0_api_key:
+        return None
+    os.environ.setdefault("HOME", "/tmp")
+    os.environ.setdefault("XDG_DATA_HOME", "/tmp")
+    try:
+        from mem0 import Memory
+    except Exception as exc:
+        logger.warning("mem0 import failed: %s", exc)
         return None
     _MEM0_CLIENT = Memory(api_key=settings.mem0_api_key)
     return _MEM0_CLIENT
