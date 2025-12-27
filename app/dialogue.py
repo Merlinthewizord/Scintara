@@ -50,7 +50,7 @@ def _mem0_client():
     except Exception as exc:
         logger.warning("mem0 import failed: %s", exc)
         return None
-    _MEM0_CLIENT = Memory(api_key=settings.mem0_api_key)
+    _MEM0_CLIENT = Memory()
     return _MEM0_CLIENT
 
 
@@ -58,11 +58,15 @@ def _mem0_context(query: str) -> str:
     client = _mem0_client()
     if client is None:
         return ""
-    results = client.search(
-        query,
-        user_id=settings.mem0_user_id,
-        session_id=settings.mem0_session_id,
-    )
+    try:
+        results = client.search(
+            query,
+            user_id=settings.mem0_user_id,
+            session_id=settings.mem0_session_id,
+        )
+    except Exception as exc:
+        logger.warning("mem0 search failed: %s", exc)
+        return ""
     if not results:
         return ""
     lines: List[str] = []
@@ -216,11 +220,14 @@ def _persist_mem0(transcript: List[Dict[str, str]]) -> None:
     payload = "\n\n".join(lines).strip()
     if not payload:
         return
-    client.add(
-        [payload],
-        user_id=settings.mem0_user_id,
-        session_id=settings.mem0_session_id,
-    )
+    try:
+        client.add(
+            [payload],
+            user_id=settings.mem0_user_id,
+            session_id=settings.mem0_session_id,
+        )
+    except Exception as exc:
+        logger.warning("mem0 add failed: %s", exc)
 
 
 async def run_archive_loop() -> None:
