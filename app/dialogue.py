@@ -43,7 +43,7 @@ def chat_with_model(
 ) -> str:
     normalized = model.strip().lower()
     if not normalized.startswith("claude"):
-        normalized = settings.anthropic_model
+        raise ValueError(f"Unsupported model: {model}")
     response = anthropic_client.messages.create(
         model=normalized,
         system=SYSTEM_PROMPT,
@@ -78,6 +78,8 @@ def run_dialogue(
 ) -> List[Dict[str, str]]:
     conversation1, conversation2 = build_conversations()
     transcript: List[Dict[str, str]] = []
+    model1 = _normalize_model(model1, fallback=settings.model_1)
+    model2 = _normalize_model(model2, fallback=settings.model_2)
 
     for _ in range(num_exchanges):
         response1 = chat_with_model(
@@ -99,6 +101,16 @@ def run_dialogue(
         conversation2.append({"role": "assistant", "content": response2})
 
     return transcript
+
+
+def _normalize_model(model: str, fallback: str) -> str:
+    value = (model or "").strip().lower()
+    if value.startswith("claude"):
+        return value
+    fallback_value = (fallback or "").strip().lower()
+    if fallback_value.startswith("claude"):
+        return fallback_value
+    return (settings.anthropic_model or "").strip().lower()
 
 
 def _transcript_to_messages(transcript: List[Dict[str, str]]) -> List[Dict[str, str]]:
