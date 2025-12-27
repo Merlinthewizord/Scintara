@@ -50,7 +50,23 @@ def _mem0_client():
     except Exception as exc:
         logger.warning("mem0 import failed: %s", exc)
         return None
-    _MEM0_CLIENT = Memory()
+    config = {
+        "llm": {
+            "provider": settings.mem0_llm_provider,
+            "config": {
+                "model": settings.mem0_llm_model,
+                "temperature": settings.mem0_llm_temperature,
+                "max_tokens": settings.mem0_llm_max_tokens,
+            },
+        },
+        "embedder": {
+            "provider": settings.mem0_embed_provider,
+            "config": {
+                "model": settings.mem0_embed_model,
+            },
+        },
+    }
+    _MEM0_CLIENT = Memory.from_config(config)
     return _MEM0_CLIENT
 
 
