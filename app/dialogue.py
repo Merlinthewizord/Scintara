@@ -41,7 +41,7 @@ def _mem0_client():
     global _MEM0_CLIENT
     if _MEM0_CLIENT is not None:
         return _MEM0_CLIENT
-    if not settings.mem0_api_key:
+    if not settings.mem0_enabled or not settings.mem0_api_key:
         return None
     os.environ.setdefault("HOME", "/tmp")
     os.environ.setdefault("XDG_DATA_HOME", "/tmp")

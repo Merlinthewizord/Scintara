@@ -29,6 +29,7 @@ class Settings(BaseModel):
     mem0_llm_max_tokens: int = int(os.getenv("MEM0_LLM_MAX_TOKENS", "2000"))
     mem0_embed_provider: str = os.getenv("MEM0_EMBED_PROVIDER", "anthropic")
     mem0_embed_model: str = os.getenv("MEM0_EMBED_MODEL", "claude-3-5-sonnet-20241022")
+    mem0_enabled: bool = os.getenv("MEM0_ENABLED", "true").lower() in ("1", "true", "yes")
     archive_path: str = os.getenv("ARCHIVE_PATH", _default_archive_path())
     dialogue_exchanges: int = int(os.getenv("DIALOGUE_EXCHANGES", "6"))
     dialogue_interval_minutes: int = int(os.getenv("DIALOGUE_INTERVAL_MINUTES", "60"))
